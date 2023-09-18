@@ -50,6 +50,10 @@ VIRTUAL_HEIGHT = 243
 -- paddle movement speed
 PADDLE_SPEED = 200
 
+
+ymax = 0
+direction = 0
+
 --[[
     Called just once at the beginning of the game; used to set up
     game objects, variables, etc. and prepare the game world.
@@ -91,7 +95,7 @@ function love.load()
 
     -- initialize our player paddles; make them global so that they can be
     -- detected by other functions and modules
-    player1 = Paddle(10, 30, 5, 20)
+    player1 = Paddle(10, VIRTUAL_HEIGHT/2 - 10, 5, 20)
     player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20)
 
     -- place a ball in the middle of the screen
@@ -108,6 +112,8 @@ function love.load()
     -- player who won the game; not set to a proper value until we reach
     -- that state in the game
     winningPlayer = 0
+
+    newPosition = VIRTUAL_HEIGHT/2
 
     -- the state of our game; can be any of the following:
     -- 1. 'start' (the beginning of the game, before first serve)
@@ -197,7 +203,7 @@ function love.update(dt)
             servingPlayer = 1
             player2Score = player2Score + 1
             sounds['score']:play()
-
+            player1.y = VIRTUAL_HEIGHT/2 - 10
             -- if we've reached a score of 10, the game is over; set the
             -- state to done so we can show the victory message
             if player2Score == 10 then
@@ -206,6 +212,7 @@ function love.update(dt)
             else
                 gameState = 'serve'
                 -- places the ball in the middle of the screen, no velocity
+
                 ball:reset()
             end
         end
@@ -214,6 +221,7 @@ function love.update(dt)
             servingPlayer = 2
             player1Score = player1Score + 1
             sounds['score']:play()
+            player1.y = VIRTUAL_HEIGHT/2 - 10
 
             if player1Score == 10 then
                 winningPlayer = 1
@@ -236,6 +244,114 @@ function love.update(dt)
     else
         player1.dy = 0
     end
+
+
+    --TODO
+
+
+    -- if ball.y >= player1.y then
+ 
+    --     if gameState == 'play' then
+    --         player1.dy = PADDLE_SPEED
+    --     end
+
+        
+    -- elseif ball.y <= player1.y then
+
+    --     if gameState == 'play' then
+    --         player1.dy = -PADDLE_SPEED
+    --     end
+        
+    -- else
+    --     player1.dy = 0
+        
+    -- end
+
+
+
+
+
+
+
+    
+    
+    -- Define a safety margin to fine-tune AI accuracy
+    local safetyMargin = 10
+
+    -- Check if the game is in 'play' state and the ball is moving towards player1
+    if gameState == 'play' and ball.dx < 0 then
+        -- Calculate ymax and newPosition based on ball's position
+        if ball.y >= VIRTUAL_HEIGHT - 4 or ball.y <= 0 then
+            -- Adjust ymax based on available space and ball direction
+            ymax = (math.abs(ball.dy) * (ball.x - 10 - 5)) / math.abs(ball.dx)
+            
+            -- Determine the direction to move
+            if ball.dy > 0 then
+                direction = 1
+            else 
+                direction = -1
+            end
+
+            -- Calculate the new position
+            newPosition = ball.y + direction * ymax
+        end
+
+        -- Handle ball collisions with player2
+        if ball:collides(player2) then
+            -- Calculate ymax based on available space and ball direction
+            ymax = (math.abs(ball.dy) * (VIRTUAL_WIDTH - 10 - 10 - 2 - 5 - 5)) / math.abs(ball.dx)
+            
+            -- Determine the direction to move
+            if ball.dy > 0 then
+                direction = 1.00
+            else 
+                direction = -1.00
+            end
+
+            -- Calculate the new position
+            newPosition = ball.y + direction * ymax
+        elseif ball.y == (VIRTUAL_HEIGHT / 2 - 2) and ball.x == (VIRTUAL_WIDTH / 2 - 2) then
+            -- Handle ball position at the center of the screen
+            ymax = (math.abs(ball.dy) * (ball.x - 10 - 5)) / math.abs(ball.dx)
+            
+            -- Determine the direction to move
+            if ball.dy > 0 then
+                direction = 1.00
+            else 
+                direction = -1.00
+            end
+
+            -- Calculate the new position
+            newPosition = ball.y + direction * ymax
+        end
+
+        -- Ensure that player1's paddle moves towards the calculated position
+        if ball.y > 0 and ball.y < VIRTUAL_HEIGHT - 4 then
+            if direction == 1 then
+                -- Move up if the position is above the calculated position
+                if player1.y <= newPosition - safetyMargin then
+                    player1.dy = PADDLE_SPEED
+                end
+            else
+                -- Move down if the position is below the calculated position
+                if player1.y > newPosition - safetyMargin then
+                    player1.dy = -PADDLE_SPEED
+                end
+            end
+        end
+    end
+
+    
+    
+    
+
+    
+    
+        
+
+
+
+
 
     -- player 2
     if love.keyboard.isDown('up') then
